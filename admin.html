@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理ダッシュボード — 関東JC ビジネスマッチング</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;
+  --green:#3B6D11;--green-light:#EAF3DE;
+  --purple:#3C3489;--purple-light:#EEEDFE;
+  --amber:#633806;--amber-light:#FAEEDA;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --gray:#5F5E5A;--gray-light:#F1EFE8;--gray-mid:#D3D1C7;
+  --bg:#fff;--bg2:#F8F8F6;--border:#E0DFD8;
+  --text:#1a1a18;--text2:#5F5E5A;--text3:#888780;
+  --sidebar:220px;--radius:10px
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--bg2);color:var(--text);display:flex;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* サイドバー */
+.sidebar{width:var(--sidebar);background:var(--blue);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.sidebar-logo{padding:20px 18px 16px;font-size:15px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.15);line-height:1.4}
+.sidebar-logo small{font-size:11px;font-weight:400;opacity:.75;display:block;margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:14px;cursor:pointer;border-left:3px solid transparent;opacity:.8;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,.12);opacity:1}
+.nav-item.active{background:rgba(255,255,255,.18);border-left-color:#fff;opacity:1;font-weight:600}
+.nav-icon{font-size:18px;width:22px;text-align:center}
+.sidebar-bottom{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,.15);font-size:12px;opacity:.65}
+
+/* メインコンテンツ */
+.main{margin-left:var(--sidebar);flex:1;padding:28px;min-height:100vh}
+.page-header{margin-bottom:24px}
+.page-header h1{font-size:22px;font-weight:700;color:var(--text)}
+.page-header p{font-size:14px;color:var(--text2);margin-top:4px}
+
+/* KPIカード */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.kpi-label{font-size:12px;color:var(--text3);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.kpi-val{font-size:30px;font-weight:700;margin:6px 0 2px;color:var(--text)}
+.kpi-sub{font-size:12px;color:var(--text3)}
+.kpi.blue .kpi-val{color:var(--blue)}
+.kpi.green .kpi-val{color:var(--green)}
+.kpi.purple .kpi-val{color:var(--purple)}
+.kpi.amber .kpi-val{color:var(--amber)}
+
+/* セクション */
+.section{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:22px}
+.section-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.section-head h2{font-size:15px;font-weight:600}
+.section-body{padding:0}
+
+/* テーブル */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg2);border-bottom:1px solid var(--border)}
+.data-table td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg2)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-pref{background:var(--blue-light);color:var(--blue)}
+.badge-dept{background:var(--green-light);color:var(--green)}
+.badge-pending{background:var(--amber-light);color:var(--amber)}
+.badge-accepted{background:var(--green-light);color:var(--green)}
+.badge-declined{background:var(--gray-light);color:var(--gray)}
+
+/* ツールバー */
+.toolbar{padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+input[type=text]{padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);width:220px}
+input[type=text]:focus{outline:none;border-color:var(--blue-mid)}
+select.filter-sel{padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)}
+select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
+.btn{padding:8px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#0C447C}
+.btn-outline{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.btn-green{background:#3B6D11;color:#fff}
+.btn-green:hover{background:#27500A}
+
+/* チャート風バー */
+.bar-wrap{margin-bottom:12px}
+.bar-label{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between}
+.bar-track{background:var(--gray-light);border-radius:4px;height:10px}
+.bar-fill{background:var(--blue-mid);border-radius:4px;height:10px;transition:width .6s}
+
+/* ローディング */
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:14px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ページ切り替え */
+.page-section{display:none}
+.page-section.active{display:block}
+
+/* レスポンシブ */
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{width:60px}
+  .sidebar .nav-item span.nav-label{display:none}
+  .sidebar-logo small,.sidebar-logo .title-text,.sidebar-bottom{display:none}
+  .main{margin-left:60px;padding:16px}
+}
+
+/* パスワード画面 */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%}
+.login-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:36px 32px;width:340px;text-align:center}
+.login-card h1{font-size:18px;font-weight:700;margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--text2);margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div style="font-size:36px;margin-bottom:12px">🔒</div>
+    <h1>管理者ログイン</h1>
+    <p>関東JC 運営スタッフ専用</p>
+    <input type="text" id="admin-pw" placeholder="管理パスワードを入力" style="width:100%;margin-bottom:12px;text-align:center" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button class="btn btn-primary" style="width:100%" onclick="adminLogin()">ログイン</button>
+    <div id="login-err" style="color:var(--red);font-size:13px;margin-top:10px;display:none">パスワードが違います</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:16px">デモ用パスワード: admin2024</div>
+  </div>
+</div>
+
+<!-- ダッシュボード本体 -->
+<div id="dashboard" style="display:none;display:flex;width:100%">
+
+  <!-- サイドバー -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div>🤝</div>
+      <span class="title-text">関東JC<br>マッチング管理</span>
+      <small>運営ダッシュボード</small>
+    </div>
+    <div style="padding:8px 0">
+      <div class="nav-item active" onclick="showPage('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span><span class="nav-label">概要</span>
+      </div>
+      <div class="nav-item" onclick="showPage('participants')" id="nav-participants">
+        <span class="nav-icon">👥</span><span class="nav-label">参加者一覧</span>
+      </div>
+      <div class="nav-item" onclick="showPage('matches')" id="nav-matches">
+        <span class="nav-icon">🔗</span><span class="nav-label">マッチング状況</span>
+      </div>
+      <div class="nav-item" onclick="showPage('analytics')" id="nav-analytics">
+        <span class="nav-icon">📈</span><span class="nav-label">分析</span>
+      </div>
+    </div>
+    <div class="sidebar-bottom">最終更新: <span id="last-updated">—</span></div>
+  </div>
+
+  <!-- メイン -->
+  <div class="main">
+
+    <!-- 概要ページ -->
+    <div class="page-section active" id="page-overview">
+      <div class="page-header">
+        <h1>ダッシュボード概要</h1>
+        <p id="event-date-label">関東JC 異業種交流会 リアルタイム状況</p>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi blue"><div class="kpi-label">参加登録者</div><div class="kpi-val" id="kpi-total">—</div><div class="kpi-sub">名</div></div>
+        <div class="kpi green"><div class="kpi-label">コネクション成立</div><div class="kpi-val" id="kpi-conn">—</div><div class="kpi-sub">件</div></div>
+        <div class="kpi purple"><div class="kpi-label">申請送信数</div><div class="kpi-val" id="kpi-req">—</div><div class="kpi-sub">件</div></div>
+        <div class="kpi amber"><div class="kpi-label">承認率</div><div class="kpi-val" id="kpi-rate">—</div><div class="kpi-sub">%</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="section">
+          <div class="section-head"><h2>都道府県別参加数</h2></div>
+          <div style="padding:20px" id="pref-chart"></div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>職業部門別参加数</h2></div>
+          <div style="padding:20px" id="dept-chart"></div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:20px">
+        <div class="section-head"><h2>最新登録者</h2></div>
+        <table class="data-table">
+          <thead><tr><th>名前</th><th>会社</th><th>都道府県</th><th>職種</th><th>登録時刻</th></tr></thead>
+          <tbody id="recent-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 参加者ページ -->
+    <div class="page-section" id="page-participants">
+      <div class="page-header">
+        <h1>参加者一覧</h1>
+        <p>全登録参加者の情報を管理できます</p>
+      </div>
+      <div class="section">
+        <div class="toolbar">
+          <input type="text" id="search-input" placeholder="名前・会社で検索..." oninput="filterParticipants()">
+          <select class="filter-sel" id="pref-filter" onchange="filterParticipants()">
+            <option value="">全都道府県</option>
+            <option>東京都</option><option>神奈川県</option><option>千葉県</option>
+            <option>埼玉県</option><option>群馬県</option><option>栃木県</option>
+            <option>茨城県</option><option>山梨県</option>
+          </select>
+          <select class="filter-sel" id="dept-filter" onchange="filterParticipants()">
+            <option value="">全職業部門</option>
+            <option>金属材料製造の職業</option><option>金属加工の職業</option>
+            <option>電気機械器具組立・修理の職業</option><option>輸送用機械器具組立・修理の職業</option>
+            <option>建設の職業</option><option>食料品製造の職業</option>
+            <option>化学製品製造の職業</option><option>印刷・製本の職業</option>
+          </select>
+          <button class="btn btn-green" onclick="exportCSV()">📥 CSV出力</button>
+          <span style="margin-left:auto;font-size:13px;color:var(--text3)" id="filtered-count"></span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>名前</th><th>会社</th><th>都道府県</th><th>職業部門</th><th>職種</th><th>コネクション</th><th>登録時刻</th></tr>
+          </thead>
+          <tbody id="participant-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- マッチング状況ページ -->
+    <div class="page-section" id="page-matches">
+      <div class="page-header">
+        <h1>マッチング状況</h1>
+        <p>申請・承認・コネクション一覧</p>
+      </div>
+      <div class="section">
+        <div class="toolbar">
+          <select class="filter-sel" id="req-status-filter" onchange="filterRequests()">
+            <option value="">全ステータス</option>
+            <option value="pending">申請中</option>
+            <option value="accepted">承認済み</option>
+            <option value="declined">辞退済み</option>
+          </select>
+          <button class="btn btn-green" onclick="exportRequestsCSV()">📥 CSV出力</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>申請者</th><th>相手</th><th>都道府県</th><th>職業部門</th><th>ステータス</th><th>日時</th></tr>
+          </thead>
+          <tbody id="requests-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 分析ページ -->
+    <div class="page-section" id="page-analytics">
+      <div class="page-header">
+        <h1>分析レポート</h1>
+        <p>マッチングの傾向分析</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="section">
+          <div class="section-head"><h2>近隣県間マッチング数</h2></div>
+          <div style="padding:20px" id="neighbor-chart"></div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>職業部門間マッチング</h2></div>
+          <div style="padding:20px" id="dept-match-chart"></div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:20px">
+        <div class="section-head"><h2>まとめサマリー</h2></div>
+        <div style="padding:20px" id="summary-text"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co'
+const SUPABASE_KEY = 'YOUR_ANON_KEY'
+const ADMIN_PASSWORD = 'admin2024' // 本番では変更必須
+// ============================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+let allParticipants = []
+let allRequests = []
+let filteredParticipants = []
+let filteredRequests = []
+
+// ========== ログイン ==========
+function adminLogin() {
+  const pw = document.getElementById('admin-pw').value
+  if (pw === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none'
+    document.getElementById('dashboard').style.display = 'flex'
+    initDashboard()
+  } else {
+    document.getElementById('login-err').style.display = 'block'
+  }
+}
+
+async function initDashboard() {
+  await Promise.all([loadParticipants(), loadRequests()])
+  renderOverview()
+  renderParticipantTable()
+  renderRequestsTable()
+  renderAnalytics()
+  updateLastUpdated()
+  // リアルタイム更新
+  sb.channel('admin').on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, async () => {
+    await loadParticipants(); renderOverview(); renderParticipantTable(); renderAnalytics(); updateLastUpdated()
+  }).on('postgres_changes', { event: '*', schema: 'public', table: 'match_requests' }, async () => {
+    await loadRequests(); renderOverview(); renderRequestsTable(); renderAnalytics(); updateLastUpdated()
+  }).subscribe()
+}
+
+async function loadParticipants() {
+  const { data } = await sb.from('participants').select('*').order('created_at', { ascending: false })
+  allParticipants = data || []
+  filteredParticipants = [...allParticipants]
+}
+async function loadRequests() {
+  const { data } = await sb.from('match_requests')
+    .select('*, from:from_id(name,company,prefecture,dept), to:to_id(name,company,prefecture,dept)')
+    .order('created_at', { ascending: false })
+  allRequests = data || []
+  filteredRequests = [...allRequests]
+}
+
+// ========== 概要 ==========
+function renderOverview() {
+  const total = allParticipants.length
+  const accepted = allRequests.filter(r => r.status === 'accepted').length
+  const reqTotal = allRequests.length
+  const rate = reqTotal > 0 ? Math.round(accepted / reqTotal * 100) : 0
+  document.getElementById('kpi-total').textContent = total
+  document.getElementById('kpi-conn').textContent = accepted
+  document.getElementById('kpi-req').textContent = reqTotal
+  document.getElementById('kpi-rate').textContent = rate
+
+  // 都道府県別
+  const prefCounts = {}
+  allParticipants.forEach(p => { prefCounts[p.prefecture] = (prefCounts[p.prefecture] || 0) + 1 })
+  const sortedPrefs = Object.entries(prefCounts).sort((a, b) => b[1] - a[1])
+  const maxPref = sortedPrefs[0]?.[1] || 1
+  document.getElementById('pref-chart').innerHTML = sortedPrefs.map(([k, v]) =>
+    `<div class="bar-wrap"><div class="bar-label"><span>${k}</span><span style="font-weight:600">${v}名</span></div>
+     <div class="bar-track"><div class="bar-fill" style="width:${v/maxPref*100}%"></div></div></div>`
+  ).join('')
+
+  // 職業部門別
+  const deptCounts = {}
+  allParticipants.forEach(p => {
+    const short = p.dept.replace('の職業', '').replace('組立・修理', '').slice(0, 12)
+    deptCounts[short] = (deptCounts[short] || 0) + 1
+  })
+  const sortedDepts = Object.entries(deptCounts).sort((a, b) => b[1] - a[1]).slice(0, 8)
+  const maxDept = sortedDepts[0]?.[1] || 1
+  document.getElementById('dept-chart').innerHTML = sortedDepts.map(([k, v]) =>
+    `<div class="bar-wrap"><div class="bar-label"><span>${k}</span><span style="font-weight:600">${v}名</span></div>
+     <div class="bar-track"><div class="bar-fill" style="width:${v/maxDept*100}%;background:#3B6D11"></div></div></div>`
+  ).join('')
+
+  // 最新5件
+  document.getElementById('recent-list').innerHTML = allParticipants.slice(0, 5).map(p =>
+    `<tr><td><strong>${p.name}</strong></td><td>${p.company}</td><td><span class="badge badge-pref">${p.prefecture}</span></td>
+     <td style="font-size:12px">${(p.dept||'').slice(0,15)}</td>
+     <td style="font-size:12px;color:var(--text3)">${formatTime(p.created_at)}</td></tr>`
+  ).join('')
+}
+
+// ========== 参加者テーブル ==========
+function renderParticipantTable() {
+  const tbody = document.getElementById('participant-table')
+  document.getElementById('filtered-count').textContent = filteredParticipants.length + '名表示中'
+  if (filteredParticipants.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">データがありません</td></tr>'
+    return
+  }
+  tbody.innerHTML = filteredParticipants.map((p, i) => {
+    const connCount = allRequests.filter(r => (r.from_id === p.id || r.to_id === p.id) && r.status === 'accepted').length
+    return `<tr>
+      <td style="color:var(--text3)">${i + 1}</td>
+      <td><strong>${p.name}</strong></td>
+      <td>${p.company}</td>
+      <td><span class="badge badge-pref">${p.prefecture}</span></td>
+      <td><span class="badge badge-dept" style="font-size:10px">${(p.dept||'').slice(0,14)}</span></td>
+      <td style="font-size:12px">${p.job || '—'}</td>
+      <td style="font-weight:${connCount>0?600:400};color:${connCount>0?'var(--blue)':'var(--text3)'}">${connCount}件</td>
+      <td style="font-size:12px;color:var(--text3)">${formatTime(p.created_at)}</td>
+    </tr>`
+  }).join('')
+}
+
+function filterParticipants() {
+  const q = document.getElementById('search-input').value.toLowerCase()
+  const pref = document.getElementById('pref-filter').value
+  const dept = document.getElementById('dept-filter').value
+  filteredParticipants = allParticipants.filter(p => {
+    const matchQ = !q || p.name.toLowerCase().includes(q) || p.company.toLowerCase().includes(q)
+    const matchP = !pref || p.prefecture === pref
+    const matchD = !dept || p.dept === dept
+    return matchQ && matchP && matchD
+  })
+  renderParticipantTable()
+}
+
+// ========== 申請テーブル ==========
+function renderRequestsTable() {
+  const tbody = document.getElementById('requests-table')
+  if (filteredRequests.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">データがありません</td></tr>'
+    return
+  }
+  tbody.innerHTML = filteredRequests.map(r => {
+    const statusBadge = r.status === 'accepted'
+      ? '<span class="badge badge-accepted">✓ 承認済み</span>'
+      : r.status === 'declined'
+      ? '<span class="badge badge-declined">辞退</span>'
+      : '<span class="badge badge-pending">申請中</span>'
+    const from = r.from || {}
+    const to = r.to || {}
+    return `<tr>
+      <td><strong>${from.name||'—'}</strong><div style="font-size:11px;color:var(--text3)">${from.company||''}</div></td>
+      <td><strong>${to.name||'—'}</strong><div style="font-size:11px;color:var(--text3)">${to.company||''}</div></td>
+      <td>${from.prefecture||'—'} → ${to.prefecture||'—'}</td>
+      <td style="font-size:11px">${(from.dept||'').slice(0,12)}</td>
+      <td>${statusBadge}</td>
+      <td style="font-size:12px;color:var(--text3)">${formatTime(r.created_at)}</td>
+    </tr>`
+  }).join('')
+}
+
+function filterRequests() {
+  const status = document.getElementById('req-status-filter').value
+  filteredRequests = status ? allRequests.filter(r => r.status === status) : [...allRequests]
+  renderRequestsTable()
+}
+
+// ========== 分析 ==========
+function renderAnalytics() {
+  const accepted = allRequests.filter(r => r.status === 'accepted')
+
+  // 近隣県間
+  const NEIGHBORS = {
+    '東京都':['神奈川県','千葉県','埼玉県'],'神奈川県':['東京都','山梨県'],
+    '千葉県':['東京都','茨城県'],'埼玉県':['東京都','群馬県','栃木県','茨城県'],
+    '群馬県':['埼玉県','栃木県','山梨県'],'栃木県':['埼玉県','群馬県','茨城県'],
+    '茨城県':['千葉県','埼玉県','栃木県'],'山梨県':['神奈川県','群馬県']
+  }
+  const neighborCount = accepted.filter(r => {
+    const fp = r.from?.prefecture, tp = r.to?.prefecture
+    return fp && tp && (fp === tp || NEIGHBORS[fp]?.includes(tp))
+  }).length
+  const crossPrefCount = accepted.length - neighborCount
+
+  const neighborEl = document.getElementById('neighbor-chart')
+  const maxN = Math.max(neighborCount, crossPrefCount, 1)
+  neighborEl.innerHTML = [
+    ['近隣県間', neighborCount, 'var(--blue-mid)'],
+    ['遠方県間', crossPrefCount, 'var(--gray-mid)']
+  ].map(([label, val, color]) =>
+    `<div class="bar-wrap"><div class="bar-label"><span>${label}</span><span style="font-weight:600">${val}件</span></div>
+     <div class="bar-track"><div class="bar-fill" style="width:${val/maxN*100}%;background:${color}"></div></div></div>`
+  ).join('')
+
+  // 職業部門間
+  const deptPairs = {}
+  accepted.forEach(r => {
+    if (!r.from?.dept || !r.to?.dept) return
+    const pair = [r.from.dept, r.to.dept].sort().map(d => d.slice(0,10)).join(' × ')
+    deptPairs[pair] = (deptPairs[pair] || 0) + 1
+  })
+  const topDeptPairs = Object.entries(deptPairs).sort((a,b)=>b[1]-a[1]).slice(0,6)
+  const maxDP = topDeptPairs[0]?.[1] || 1
+  document.getElementById('dept-match-chart').innerHTML = topDeptPairs.length > 0
+    ? topDeptPairs.map(([k, v]) =>
+        `<div class="bar-wrap"><div class="bar-label" style="font-size:11px"><span>${k}</span><span style="font-weight:600">${v}件</span></div>
+         <div class="bar-track"><div class="bar-fill" style="width:${v/maxDP*100}%;background:#3B6D11"></div></div></div>`
+      ).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:20px 0">まだデータがありません</div>'
+
+  // サマリー
+  const topPref = Object.entries(
+    allParticipants.reduce((acc,p)=>{acc[p.prefecture]=(acc[p.prefecture]||0)+1;return acc},{})
+  ).sort((a,b)=>b[1]-a[1])[0]
+  document.getElementById('summary-text').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div style="background:var(--blue-light);border-radius:8px;padding:14px">
+        <div style="font-size:12px;color:var(--blue)">最多参加県</div>
+        <div style="font-size:18px;font-weight:700;margin-top:4px">${topPref?.[0]||'—'}</div>
+        <div style="font-size:12px;color:var(--blue)">${topPref?.[1]||0}名</div>
+      </div>
+      <div style="background:var(--green-light);border-radius:8px;padding:14px">
+        <div style="font-size:12px;color:var(--green)">コネクション成立率</div>
+        <div style="font-size:18px;font-weight:700;margin-top:4px">${allRequests.length>0?Math.round(accepted.length/allRequests.length*100):0}%</div>
+        <div style="font-size:12px;color:var(--green)">${accepted.length}/${allRequests.length}件</div>
+      </div>
+      <div style="background:var(--purple-light);border-radius:8px;padding:14px">
+        <div style="font-size:12px;color:var(--purple)">1人平均コネクション</div>
+        <div style="font-size:18px;font-weight:700;margin-top:4px">${allParticipants.length>0?(accepted.length*2/allParticipants.length).toFixed(1):0}</div>
+        <div style="font-size:12px;color:var(--purple)">件/人</div>
+      </div>
+    </div>
+  `
+}
+
+// ========== CSV出力 ==========
+function exportCSV() {
+  const header = ['No','名前','会社','都道府県','職業部門','職種','PR','コネクション数','登録日時']
+  const rows = filteredParticipants.map((p, i) => {
+    const connCount = allRequests.filter(r => (r.from_id === p.id || r.to_id === p.id) && r.status === 'accepted').length
+    return [i+1, p.name, p.company, p.prefecture, p.dept, p.job||'', (p.pr||'').replace(/,/g,'，'), connCount, formatTime(p.created_at)]
+  })
+  downloadCSV([header, ...rows], '参加者一覧_' + dateStr() + '.csv')
+}
+
+function exportRequestsCSV() {
+  const header = ['申請者','申請者会社','申請者都道府県','相手','相手会社','相手都道府県','ステータス','日時']
+  const rows = filteredRequests.map(r => [
+    r.from?.name||'', r.from?.company||'', r.from?.prefecture||'',
+    r.to?.name||'', r.to?.company||'', r.to?.prefecture||'',
+    r.status, formatTime(r.created_at)
+  ])
+  downloadCSV([header, ...rows], 'マッチング状況_' + dateStr() + '.csv')
+}
+
+function downloadCSV(rows, filename) {
+  const bom = '\uFEFF'
+  const csv = bom + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  a.download = filename
+  a.click()
+}
+
+// ========== ページ切替 ==========
+function showPage(name) {
+  document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+  document.getElementById('page-' + name).classList.add('active')
+  document.getElementById('nav-' + name).classList.add('active')
+}
+
+// ========== ユーティリティ ==========
+function formatTime(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+}
+function dateStr() {
+  return new Date().toISOString().slice(0, 10).replace(/-/g, '')
+}
+function updateLastUpdated() {
+  document.getElementById('last-updated').textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#185FA5">
+<title>関東JC ビジネスマッチング</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;
+  --green:#3B6D11;--green-light:#EAF3DE;
+  --purple:#3C3489;--purple-light:#EEEDFE;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --amber:#633806;--amber-light:#FAEEDA;
+  --gray:#5F5E5A;--gray-light:#F1EFE8;--gray-mid:#D3D1C7;
+  --bg:#fff;--bg2:#F8F8F6;--border:#E0DFD8;
+  --text:#1a1a18;--text2:#5F5E5A;--text3:#888780;
+  --radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(0,0,0,.08)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--bg2);color:var(--text);min-height:100vh}
+.app{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+/* ヘッダー */
+.header{background:var(--blue);color:#fff;padding:14px 16px 10px;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.header-top{display:flex;align-items:center;gap:10px}
+.header-logo{font-size:20px}
+.header-title{font-size:16px;font-weight:600;letter-spacing:.02em}
+.header-sub{font-size:11px;opacity:.8;margin-top:1px}
+.header-badge{margin-left:auto;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px}
+
+/* タブ */
+.tab-bar{display:flex;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:69px;z-index:19}
+.tab{flex:1;padding:8px 4px 6px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text3);font-size:10px;font-family:inherit;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-icon{font-size:20px;line-height:1}
+.tab .dot{width:7px;height:7px;background:#E24B4A;border-radius:50%;position:absolute;top:6px;right:calc(50% - 14px)}
+
+/* スクリーン */
+.screen{display:none;flex:1;overflow-y:auto;padding:16px;padding-bottom:24px}
+.screen.active{display:block}
+
+/* フォーム */
+.section-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:13px;color:var(--text2);margin-bottom:5px;display:block}
+.form-label span{color:#E24B4A;margin-left:2px}
+input[type=text],input[type=email],select,textarea{
+  width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);
+  -webkit-appearance:none;transition:border .2s
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(55,138,221,.15)}
+textarea{min-height:72px;resize:vertical;line-height:1.5}
+.btn{display:block;width:100%;padding:13px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .2s;text-align:center}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:active{background:#0C447C}
+.btn-outline{background:var(--bg);color:var(--blue);border:1px solid var(--blue)}
+.btn-sm{padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--radius-sm);cursor:pointer;border:none;font-family:inherit}
+.btn-accept{background:var(--blue);color:#fff}
+.btn-decline{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.btn-line{background:#06C755;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-line:active{background:#04a344}
+
+/* カード */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-highlight{border-color:var(--blue-mid);border-width:2px}
+
+/* バッジ */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;gap:3px}
+.badge-pref{background:var(--blue-light);color:var(--blue)}
+.badge-dept{background:var(--green-light);color:var(--green)}
+.badge-match{background:var(--purple-light);color:var(--purple)}
+.badge-neighbor{background:var(--amber-light);color:var(--amber)}
+.badge-conn{background:var(--green-light);color:var(--green)}
+
+/* アバター */
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0}
+
+/* マッチングカード */
+.match-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.match-header{display:flex;gap:12px;align-items:flex-start}
+.match-info{flex:1;min-width:0}
+.match-name{font-size:15px;font-weight:600;color:var(--text)}
+.match-company{font-size:12px;color:var(--text2);margin-top:1px}
+.match-score-wrap{text-align:right;flex-shrink:0}
+.match-score{font-size:24px;font-weight:700;color:var(--blue);line-height:1}
+.match-score-label{font-size:10px;color:var(--text3)}
+.score-bar{background:var(--gray-light);border-radius:4px;height:5px;margin:8px 0}
+.score-fill{border-radius:4px;height:5px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.match-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.match-pr{font-size:13px;color:var(--text2);margin-top:7px;font-style:italic;border-left:3px solid var(--gray-mid);padding-left:9px}
+.match-actions{margin-top:10px;display:flex;gap:8px}
+
+/* プロフィール */
+.profile-hero{background:linear-gradient(135deg,var(--blue) 0%,#0C447C 100%);color:#fff;border-radius:var(--radius);padding:20px;margin-bottom:16px;text-align:center}
+.profile-avatar-wrap{margin:0 auto 12px;width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}
+.profile-name{font-size:20px;font-weight:700;margin-bottom:4px}
+.profile-company{font-size:14px;opacity:.85}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--bg2);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.stat-num{font-size:22px;font-weight:700;color:var(--blue)}
+.stat-label{font-size:11px;color:var(--text3);margin-top:2px}
+#qr-wrap{text-align:center;padding:16px 0}
+#qr-wrap canvas{border:1px solid var(--border);border-radius:8px;padding:8px}
+
+/* ローディング */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text3);gap:10px}
+.spinner{width:20px;height:20px;border:2px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:8px}
+
+/* トースト */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#2C2C2A;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;opacity:0;transition:all .3s;z-index:100;white-space:nowrap;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* QRスキャン案内 */
+.qr-hint{background:var(--blue-light);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--blue);margin-bottom:14px;display:flex;gap:10px;align-items:center}
+
+/* エラー */
+.error-msg{color:#A32D2D;font-size:13px;margin-top:6px;display:none}
+
+/* 空状態 */
+.empty-state{text-align:center;padding:48px 24px}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px;color:var(--text2);line-height:1.6}
+
+/* セクションヘッダー */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin:16px 0 10px}
+.sec-header h3{font-size:14px;font-weight:600;color:var(--text)}
+.sec-header span{font-size:12px;color:var(--text3)}
+
+/* 申請受信カード */
+.req-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.req-info{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.req-btns{display:flex;gap:8px}
+.req-btns button{flex:1}
+
+/* コネクションカード */
+.conn-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:center}
+.conn-card .info{flex:1;min-width:0}
+.conn-card .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conn-card .meta{font-size:12px;color:var(--text2);margin-top:1px}
+
+/* 近隣フィルタ */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;border:1px solid var(--border);background:var(--bg);color:var(--text2);transition:all .2s;flex-shrink:0}
+.filter-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-top">
+      <span class="header-logo">🤝</span>
+      <div>
+        <div class="header-title">関東JC ビジネスマッチング</div>
+        <div class="header-sub">1都7県 異業種交流会</div>
+      </div>
+      <div class="header-badge" id="online-count">— 名参加中</div>
+    </div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('register')" id="tab-register">
+      <span class="tab-icon">📋</span>登録
+    </button>
+    <button class="tab" onclick="switchTab('match')" id="tab-match" style="position:relative">
+      <span class="tab-icon">🔍</span>マッチング
+    </button>
+    <button class="tab" onclick="switchTab('requests')" id="tab-requests" style="position:relative">
+      <span class="tab-icon">📬</span>申請
+      <span class="dot" id="req-dot" style="display:none"></span>
+    </button>
+    <button class="tab" onclick="switchTab('profile')" id="tab-profile">
+      <span class="tab-icon">👤</span>マイページ
+    </button>
+  </div>
+
+  <!-- 登録画面 -->
+  <div class="screen active" id="screen-register">
+    <div id="reg-already" style="display:none">
+      <div class="card card-highlight" style="text-align:center;padding:24px">
+        <div style="font-size:36px;margin-bottom:10px">✅</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:6px">登録済みです</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="reg-already-name"></div>
+        <button class="btn btn-outline" onclick="switchTab('match')">マッチングを見る</button>
+        <button class="btn" style="margin-top:8px;color:var(--red)" onclick="clearMyProfile()">別の情報で登録し直す</button>
+      </div>
+    </div>
+    <div id="reg-form">
+      <div class="qr-hint">
+        <span style="font-size:20px">📱</span>
+        <span>このページを会場でQRコードから開いて、その場で登録できます</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">お名前<span>*</span></label>
+        <input type="text" id="f-name" placeholder="山田 太郎">
+      </div>
+      <div class="form-group">
+        <label class="form-label">会社名<span>*</span></label>
+        <input type="text" id="f-company" placeholder="株式会社○○">
+      </div>
+      <div class="form-group">
+        <label class="form-label">都道府県<span>*</span></label>
+        <select id="f-pref">
+          <option value="">選択してください</option>
+          <option>東京都</option><option>神奈川県</option><option>千葉県</option>
+          <option>埼玉県</option><option>群馬県</option><option>栃木県</option>
+          <option>茨城県</option><option>山梨県</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">職業部門<span>*</span></label>
+        <select id="f-dept">
+          <option value="">選択してください</option>
+          <option>金属材料製造の職業</option><option>金属加工の職業</option>
+          <option>電気機械器具組立・修理の職業</option><option>輸送用機械器具組立・修理の職業</option>
+          <option>建設の職業</option><option>染色・紡糸等繊維製造の職業</option>
+          <option>食料品製造の職業</option><option>化学製品製造の職業</option>
+          <option>印刷・製本の職業</option><option>木・竹・草・つる製品製造の職業</option>
+          <option>窯業製品製造の職業</option><option>飲食物調理及び接客サービスの職業</option>
+          <option>生活衛生サービスの職業</option><option>装身具等身の回り品製造の職業</option>
+          <option>その他の技能工・生産工程の職業</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">職種（具体的に）<span>*</span></label>
+        <input type="text" id="f-job" placeholder="例: 自動車整備工、電気配線工事作業者">
+      </div>
+      <div class="form-group">
+        <label class="form-label">一言PR <span style="color:var(--text3);font-weight:400">(任意)</span></label>
+        <textarea id="f-pr" placeholder="例: 30年の溶接技術でコラボ歓迎。試作品・小ロット対応可"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メールアドレス <span style="color:var(--text3);font-weight:400">(コネクション通知用・任意)</span></label>
+        <input type="email" id="f-email" placeholder="example@email.com">
+      </div>
+      <div id="reg-error" class="error-msg">入力内容を確認してください</div>
+      <button class="btn btn-primary" id="reg-btn" onclick="register()">参加登録して入場 →</button>
+    </div>
+  </div>
+
+  <!-- マッチング画面 -->
+  <div class="screen" id="screen-match">
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-btn active" onclick="setFilter('all',this)">全員</button>
+      <button class="filter-btn" onclick="setFilter('neighbor',this)">🗺 近隣県</button>
+      <button class="filter-btn" onclick="setFilter('same',this)">🔧 同職系</button>
+    </div>
+    <div id="match-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+  </div>
+
+  <!-- 申請画面 -->
+  <div class="screen" id="screen-requests">
+    <div class="sec-header"><h3>受信した申請</h3><span id="req-count">0件</span></div>
+    <div id="req-list"><div class="empty"><div class="empty-icon">📭</div>申請はまだありません</div></div>
+    <div class="sec-header" style="margin-top:8px"><h3>コネクション一覧</h3><span id="conn-count">0件</span></div>
+    <div id="conn-list"><div class="empty"><div class="empty-icon">🤝</div>まだコネクションがありません</div></div>
+  </div>
+
+  <!-- プロフィール画面 -->
+  <div class="screen" id="screen-profile">
+    <div id="profile-content">
+      <div class="empty-state">
+        <div class="icon">👤</div>
+        <p>先に登録タブから<br>参加登録してください</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG — ここを自分のSupabaseプロジェクトの値に変更
+// ============================================================
+const SUPABASE_URL = 'https://jskvobgulnjpohwmrpip.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impza3ZvYmd1bG5qcG9od21ycGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDY1NTAsImV4cCI6MjA5MTMyMjU1MH0.tYXWIRfhJ1HAZBrqA5f_MBZj8lTGvy-HjAjO6Vm4ZPw'
+const LINE_NOTIFY_PROXY = '' // LINE Notify送信用サーバーレス関数のURL（後述）
+// ============================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// 近隣県マップ
+const NEIGHBORS = {
+  '東京都':['神奈川県','千葉県','埼玉県'],
+  '神奈川県':['東京都','山梨県'],
+  '千葉県':['東京都','茨城県'],
+  '埼玉県':['東京都','群馬県','栃木県','茨城県'],
+  '群馬県':['埼玉県','栃木県','山梨県'],
+  '栃木県':['埼玉県','群馬県','茨城県'],
+  '茨城県':['千葉県','埼玉県','栃木県'],
+  '山梨県':['神奈川県','群馬県']
+}
+
+// 職種グループ
+const DEPTGROUP = {
+  '金属系':['金属材料製造の職業','金属加工の職業'],
+  '電気・機械系':['電気機械器具組立・修理の職業','輸送用機械器具組立・修理の職業'],
+  '建設系':['建設の職業'],
+  '食品・飲食系':['食料品製造の職業','飲食物調理及び接客サービスの職業'],
+  '製造系':['化学製品製造の職業','窯業製品製造の職業','木・竹・草・つる製品製造の職業','印刷・製本の職業','染色・紡糸等繊維製造の職業'],
+  'サービス系':['生活衛生サービスの職業','装身具等身の回り品製造の職業','その他の技能工・生産工程の職業']
+}
+
+const AVATARS = ['#E6F1FB:#185FA5','#EAF3DE:#3B6D11','#EEEDFE:#534AB7','#FAEEDA:#854F0B','#FAECE7:#993C1D','#E1F5EE:#0F6E56']
+let myProfile = null
+let allParticipants = []
+let myRequests = []
+let myConnections = []
+let currentFilter = 'all'
+let realtimeSub = null
+
+// ========== 起動 ==========
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = localStorage.getItem('jc_my_id')
+  if (saved) await loadMyProfile(saved)
+  await loadParticipants()
+  updateOnlineCount()
+  subscribeRealtime()
+})
+
+async function loadMyProfile(id) {
+  const { data } = await sb.from('participants').select('*').eq('id', id).single()
+  if (data) {
+    myProfile = data
+    showRegistered()
+    await loadMyRequestsAndConns()
+  } else {
+    localStorage.removeItem('jc_my_id')
+  }
+}
+
+async function loadParticipants() {
+  const { data } = await sb.from('participants').select('*').order('created_at', { ascending: false })
+  allParticipants = data || []
+  if (document.getElementById('screen-match').classList.contains('active')) renderMatches()
+}
+
+async function loadMyRequestsAndConns() {
+  if (!myProfile) return
+  const { data: reqs } = await sb.from('match_requests')
+    .select('*, from:from_id(*), to:to_id(*)')
+    .or(`from_id.eq.${myProfile.id},to_id.eq.${myProfile.id}`)
+  myRequests = reqs || []
+  const pending = myRequests.filter(r => r.to_id === myProfile.id && r.status === 'pending')
+  document.getElementById('req-dot').style.display = pending.length > 0 ? 'block' : 'none'
+  document.getElementById('req-count').textContent = pending.length + '件'
+  const conns = myRequests.filter(r => r.status === 'accepted')
+  myConnections = conns.map(r => r.from_id === myProfile.id ? r.to : r.from).filter(Boolean)
+  document.getElementById('conn-count').textContent = myConnections.length + '件'
+  if (document.getElementById('screen-requests').classList.contains('active')) renderRequests()
+  if (document.getElementById('screen-profile').classList.contains('active')) renderProfile()
+}
+
+// ========== リアルタイム購読 ==========
+function subscribeRealtime() {
+  realtimeSub = sb.channel('public-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, async () => {
+      await loadParticipants()
+      updateOnlineCount()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'match_requests' }, async () => {
+      if (myProfile) await loadMyRequestsAndConns()
+    })
+    .subscribe()
+}
+
+async function updateOnlineCount() {
+  document.getElementById('online-count').textContent = allParticipants.length + '名参加中'
+}
+
+// ========== 登録 ==========
+async function register() {
+  const name = document.getElementById('f-name').value.trim()
+  const company = document.getElementById('f-company').value.trim()
+  const pref = document.getElementById('f-pref').value
+  const dept = document.getElementById('f-dept').value
+  const job = document.getElementById('f-job').value.trim()
+  const pr = document.getElementById('f-pr').value.trim()
+  const email = document.getElementById('f-email').value.trim()
+  const errEl = document.getElementById('reg-error')
+
+  if (!name || !company || !pref || !dept || !job) {
+    errEl.style.display = 'block'
+    errEl.textContent = '必須項目（*）をすべて入力してください'
+    return
+  }
+  errEl.style.display = 'none'
+  document.getElementById('reg-btn').textContent = '登録中...'
+  document.getElementById('reg-btn').disabled = true
+
+  const { data, error } = await sb.from('participants').insert([
+    { name, company, prefecture: pref, dept, job, pr, line_user_id: email }
+  ]).select().single()
+
+  document.getElementById('reg-btn').textContent = '参加登録して入場 →'
+  document.getElementById('reg-btn').disabled = false
+
+  if (error) {
+    errEl.style.display = 'block'
+    errEl.textContent = '登録に失敗しました。もう一度お試しください'
+    return
+  }
+
+  myProfile = data
+  localStorage.setItem('jc_my_id', data.id)
+  showToast('✅ 登録完了！マッチングを確認しましょう')
+  showRegistered()
+  await loadParticipants()
+  await loadMyRequestsAndConns()
+  setTimeout(() => switchTab('match'), 1200)
+}
+
+function showRegistered() {
+  document.getElementById('reg-form').style.display = 'none'
+  document.getElementById('reg-already').style.display = 'block'
+  document.getElementById('reg-already-name').textContent = myProfile.name + ' / ' + myProfile.company
+}
+
+function clearMyProfile() {
+  localStorage.removeItem('jc_my_id')
+  myProfile = null
+  document.getElementById('reg-form').style.display = 'block'
+  document.getElementById('reg-already').style.display = 'none'
+}
+
+// ========== マッチングスコア ==========
+function deptScore(d1, d2) {
+  if (!d1 || !d2) return 0
+  if (d1 === d2) return 100
+  for (const g of Object.values(DEPTGROUP)) {
+    if (g.includes(d1) && g.includes(d2)) return 65
+  }
+  return 20
+}
+function prefScore(p1, p2) {
+  if (!p1 || !p2) return 0
+  if (p1 === p2) return 40
+  if (NEIGHBORS[p1]?.includes(p2)) return 80
+  return 15
+}
+function calcScore(a, b) {
+  return Math.round(deptScore(a.dept, b.dept) * 0.65 + prefScore(a.prefecture, b.prefecture) * 0.35)
+}
+
+function isNeighbor(p1, p2) {
+  if (!p1 || !p2) return false
+  return p1 === p2 || NEIGHBORS[p1]?.includes(p2)
+}
+function isSameDeptGroup(d1, d2) {
+  if (!d1 || !d2) return false
+  if (d1 === d2) return true
+  for (const g of Object.values(DEPTGROUP)) {
+    if (g.includes(d1) && g.includes(d2)) return true
+  }
+  return false
+}
+
+// ========== マッチング描画 ==========
+function setFilter(f, el) {
+  currentFilter = f
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+  el.classList.add('active')
+  renderMatches()
+}
+
+function renderMatches() {
+  const el = document.getElementById('match-list')
+  if (!myProfile) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">👋</div><p>先に登録タブから<br>参加登録してください</p></div>'
+    return
+  }
+  let list = allParticipants.filter(p => p.id !== myProfile.id)
+  if (currentFilter === 'neighbor') list = list.filter(p => isNeighbor(myProfile.prefecture, p.prefecture))
+  if (currentFilter === 'same') list = list.filter(p => isSameDeptGroup(myProfile.dept, p.dept))
+  list = list.map(p => ({ ...p, score: calcScore(myProfile, p) })).sort((a, b) => b.score - a.score)
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>条件に合う参加者が見つかりません</p></div>'
+    return
+  }
+  el.innerHTML = list.map((p, i) => renderMatchCard(p, i)).join('')
+}
+
+function renderMatchCard(p, i) {
+  const ac = AVATARS[i % AVATARS.length].split(':')
+  const init = p.name.split(/\s+/).map(s => s[0]).join('').slice(0, 2)
+  const isConn = myConnections.find(c => c?.id === p.id)
+  const sentReq = myRequests.find(r => r.from_id === myProfile?.id && r.to_id === p.id)
+  const neighborBadge = isNeighbor(myProfile?.prefecture, p.prefecture)
+    ? `<span class="badge badge-neighbor">🗺 近隣</span>` : ''
+  const scoreColor = p.score >= 80 ? '#185FA5' : p.score >= 50 ? '#3B6D11' : '#888780'
+  const barColor = p.score >= 80 ? 'var(--blue-mid)' : p.score >= 50 ? '#639922' : 'var(--gray-mid)'
+  let actionHtml = ''
+  if (isConn) actionHtml = `<span class="badge badge-conn">✓ コネクション成立</span>`
+  else if (sentReq?.status === 'accepted') actionHtml = `<span class="badge badge-conn">✓ 承認済み</span>`
+  else if (sentReq) actionHtml = `<span class="badge" style="background:var(--gray-light);color:var(--gray)">申請送信済み</span>`
+  else actionHtml = `<button class="btn btn-sm btn-accept" onclick="sendRequest('${p.id}')">コネクション申請</button>`
+
+  return `<div class="match-card">
+    <div class="match-header">
+      <div class="avatar" style="width:46px;height:46px;background:${ac[0]};color:${ac[1]};font-size:16px">${init}</div>
+      <div class="match-info">
+        <div class="match-name">${p.name}</div>
+        <div class="match-company">${p.company}</div>
+        <div class="match-tags">
+          <span class="badge badge-pref">📍 ${p.prefecture}</span>
+          ${neighborBadge}
+        </div>
+      </div>
+      <div class="match-score-wrap">
+        <div class="match-score" style="color:${scoreColor}">${p.score}</div>
+        <div class="match-score-label">マッチ度</div>
+      </div>
+    </div>
+    <div class="score-bar"><div class="score-fill" style="width:${p.score}%;background:${barColor}"></div></div>
+    <span class="badge badge-dept" style="font-size:11px">${p.dept}</span>
+    ${p.job ? `<div style="font-size:13px;color:var(--text2);margin-top:6px">職種: ${p.job}</div>` : ''}
+    ${p.pr ? `<div class="match-pr">${p.pr}</div>` : ''}
+    <div class="match-actions">${actionHtml}</div>
+  </div>`
+}
+
+// ========== 申請送信 ==========
+async function sendRequest(toId) {
+  if (!myProfile) { showToast('先に登録してください'); return }
+  const { error } = await sb.from('match_requests').insert([
+    { from_id: myProfile.id, to_id: toId, status: 'pending' }
+  ])
+  if (error) { showToast('申請に失敗しました'); return }
+  showToast('📬 申請を送信しました！')
+  await loadMyRequestsAndConns()
+  renderMatches()
+  // LINE通知（サーバーレス関数経由）
+  notifyLine(toId, `${myProfile.name}（${myProfile.company}）さんからコネクション申請が届きました！`)
+}
+
+// ========== 申請承認・辞退 ==========
+async function acceptRequest(reqId, fromId) {
+  await sb.from('match_requests').update({ status: 'accepted' }).eq('id', reqId)
+  showToast('🎉 コネクション成立！')
+  await loadMyRequestsAndConns()
+  renderMatches()
+  notifyLine(fromId, `${myProfile.name}さんがコネクション申請を承認しました！`)
+}
+
+async function declineRequest(reqId) {
+  await sb.from('match_requests').update({ status: 'declined' }).eq('id', reqId)
+  showToast('辞退しました')
+  await loadMyRequestsAndConns()
+}
+
+// ========== 申請一覧描画 ==========
+function renderRequests() {
+  const pendingReqs = myRequests.filter(r => r.to_id === myProfile?.id && r.status === 'pending')
+  const reqEl = document.getElementById('req-list')
+  if (pendingReqs.length === 0) {
+    reqEl.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>申請はまだありません</div>'
+  } else {
+    reqEl.innerHTML = pendingReqs.map((r, i) => {
+      const p = r.from
+      if (!p) return ''
+      const ac = AVATARS[i % AVATARS.length].split(':')
+      const init = (p.name || '').split(/\s+/).map(s => s[0]).join('').slice(0, 2) || '?'
+      return `<div class="req-card">
+        <div class="req-info">
+          <div class="avatar" style="width:42px;height:42px;background:${ac[0]};color:${ac[1]};font-size:14px">${init}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:600">${p.name}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${p.company}</div>
+            <div style="font-size:12px;color:var(--text2)">${p.prefecture} / ${p.dept}</div>
+          </div>
+        </div>
+        <div class="req-btns">
+          <button class="btn-sm btn-decline" onclick="declineRequest('${r.id}')">辞退</button>
+          <button class="btn-sm btn-accept" onclick="acceptRequest('${r.id}','${r.from_id}')">承認する</button>
+        </div>
+      </div>`
+    }).join('')
+  }
+
+  const connEl = document.getElementById('conn-list')
+  document.getElementById('conn-count').textContent = myConnections.length + '件'
+  if (myConnections.length === 0) {
+    connEl.innerHTML = '<div class="empty"><div class="empty-icon">🤝</div>まだコネクションがありません</div>'
+  } else {
+    connEl.innerHTML = myConnections.map((p, i) => {
+      if (!p) return ''
+      const ac = AVATARS[i % AVATARS.length].split(':')
+      const init = (p.name || '').split(/\s+/).map(s => s[0]).join('').slice(0, 2) || '?'
+      return `<div class="conn-card">
+        <div class="avatar" style="width:40px;height:40px;background:${ac[0]};color:${ac[1]};font-size:13px">${init}</div>
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <div class="meta">${p.company} · ${p.prefecture}</div>
+        </div>
+        <span class="badge badge-conn">接続済み</span>
+      </div>`
+    }).join('')
+  }
+}
+
+// ========== プロフィール描画 ==========
+async function renderProfile() {
+  if (!myProfile) return
+  const myStats = {
+    sent: myRequests.filter(r => r.from_id === myProfile.id).length,
+    received: myRequests.filter(r => r.to_id === myProfile.id).length,
+    conn: myConnections.length
+  }
+  const el = document.getElementById('profile-content')
+  const init = myProfile.name.split(/\s+/).map(s => s[0]).join('').slice(0, 2)
+  el.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar-wrap">${init}</div>
+      <div class="profile-name">${myProfile.name}</div>
+      <div class="profile-company">${myProfile.company}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <span class="badge" style="background:rgba(255,255,255,.25);color:#fff">📍 ${myProfile.prefecture}</span>
+        <span class="badge" style="background:rgba(255,255,255,.25);color:#fff">${myProfile.dept}</span>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${myStats.received}</div><div class="stat-label">受信申請</div></div>
+      <div class="stat-card"><div class="stat-num">${myStats.sent}</div><div class="stat-label">送信申請</div></div>
+      <div class="stat-card" style="background:var(--blue-light)"><div class="stat-num" style="color:var(--blue)">${myStats.conn}</div><div class="stat-label">コネクション</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">職種</div>
+      <div style="font-size:15px;font-weight:500">${myProfile.job}</div>
+      ${myProfile.pr ? `<div style="margin-top:10px;font-size:13px;color:var(--text2)">PR</div><div style="font-size:14px;margin-top:4px;line-height:1.6">${myProfile.pr}</div>` : ''}
+    </div>
+    <div id="qr-wrap">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px">あなたのプロフィールQRコード</div>
+      <canvas id="qr-canvas"></canvas>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">スキャンするとプロフィールが共有されます</div>
+    </div>
+    <button class="btn btn-outline" style="margin-top:4px" onclick="clearMyProfile();switchTab('register')">プロフィールを編集</button>
+  `
+  // QRコード生成
+  QRCode.toCanvas(document.getElementById('qr-canvas'),
+    window.location.href + '?from=' + myProfile.id,
+    { width: 160, margin: 1, color: { dark: '#185FA5', light: '#ffffff' } }
+  )
+}
+
+// ========== LINE通知 ==========
+async function notifyLine(toParticipantId, message) {
+  if (!LINE_NOTIFY_PROXY) return
+  try {
+    await fetch(LINE_NOTIFY_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_participant_id: toParticipantId, message })
+    })
+  } catch (e) { /* サイレント失敗 */ }
+}
+
+// ========== タブ切替 ==========
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+  document.getElementById('tab-' + name).classList.add('active')
+  document.getElementById('screen-' + name).classList.add('active')
+  if (name === 'match') renderMatches()
+  if (name === 'requests' && myProfile) renderRequests()
+  if (name === 'profile' && myProfile) renderProfile()
+}
+
+// ========== トースト ==========
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 2800)
+}
+</script>
+</body>
+</html>
