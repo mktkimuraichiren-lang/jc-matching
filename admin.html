@@ -181,7 +181,7 @@ select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
       <div class="section" style="margin-top:20px">
         <div class="section-head"><h2>最新登録者</h2></div>
         <table class="data-table">
-          <thead><tr><th>名前</th><th>会社</th><th>都道府県</th><th>職種</th><th>登録時刻</th></tr></thead>
+          <thead><tr><th>名前</th><th>会社</th><th>都道府県</th><th>職種</th><th>登録時刻</th><th>操作</th></tr></thead>
           <tbody id="recent-list"></tbody>
         </table>
       </div>
@@ -239,7 +239,7 @@ select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
         </div>
         <table class="data-table">
           <thead>
-            <tr><th>#</th><th>名前</th><th>会社</th><th>都道府県</th><th>職業部門</th><th>職種</th><th>コネクション</th><th>登録時刻</th></tr>
+            <tr><th>#</th><th>名前</th><th>会社</th><th>都道府県</th><th>職業部門</th><th>職種</th><th>コネクション</th><th>登録時刻</th><th>操作</th></tr>
           </thead>
           <tbody id="participant-table"></tbody>
         </table>
@@ -412,8 +412,19 @@ function renderParticipantTable() {
       <td style="font-size:12px">${p.job || '—'}</td>
       <td style="font-weight:${connCount>0?600:400};color:${connCount>0?'var(--blue)':'var(--text3)'}">${connCount}件</td>
       <td style="font-size:12px;color:var(--text3)">${formatTime(p.created_at)}</td>
+      <td><button onclick="deleteParticipant('${p.id}','${p.name}')" style="padding:4px 10px;background:#A32D2D;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">削除</button></td>
     </tr>`
   }).join('')
+}
+
+async function deleteParticipant(id, name) {
+  if (!confirm(name + ' さんのアカウントを削除しますか？\nコネクション・メッセージも全て削除されます。')) return;
+  const { error } = await sb.from('participants').delete().eq('id', id);
+  if (error) { alert('削除に失敗しました: ' + error.message); return; }
+  showToast('✅ ' + name + ' さんを削除しました');
+  await loadParticipants();
+  renderParticipantTable();
+  renderOverview();
 }
 
 function filterParticipants() {
@@ -530,6 +541,17 @@ function renderAnalytics() {
 }
 
 // ========== CSV出力 ==========
+
+async function deleteParticipant(id, name) {
+  if (!confirm(name + ' を削除しますか？\nこの参加者のコネクション・申請データもすべて削除されます。')) return;
+  const { error } = await sb.from('participants').delete().eq('id', id);
+  if (error) { alert('削除に失敗しました: ' + error.message); return; }
+  alert(name + ' を削除しました');
+  await loadParticipants();
+  renderOverview();
+  renderParticipantTable();
+}
+
 function exportCSV() {
   const header = ['No','名前','会社','都道府県','職業部門','職種','PR','コネクション数','登録日時']
   const rows = filteredParticipants.map((p, i) => {
@@ -575,6 +597,17 @@ function formatTime(iso) {
 function dateStr() {
   return new Date().toISOString().slice(0, 10).replace(/-/g, '')
 }
+function showToast(msg) {
+  const existing = document.getElementById('admin-toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'admin-toast';
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2C2C2A;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;z-index:9999;white-space:nowrap';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
 function updateLastUpdated() {
   document.getElementById('last-updated').textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
 }
