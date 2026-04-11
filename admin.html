@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>管理ダッシュボード — 関東JC ビジネスマッチング</title>
+<title>管理ダッシュボード — KANTOビジネスマッチング</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -133,7 +133,7 @@ select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
   <div class="sidebar">
     <div class="sidebar-logo">
       <div>🤝</div>
-      <span class="title-text">関東JC<br>マッチング管理</span>
+      <span class="title-text">KANTO<br>マッチング管理</span>
       <small>運営ダッシュボード</small>
     </div>
     <div style="padding:8px 0">
@@ -160,7 +160,7 @@ select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
     <div class="page-section active" id="page-overview">
       <div class="page-header">
         <h1>ダッシュボード概要</h1>
-        <p id="event-date-label">関東JC 異業種交流会 リアルタイム状況</p>
+        <p id="event-date-label">公益社団法人日本青年会議所関東地区協議会</p>
       </div>
       <div class="kpi-grid">
         <div class="kpi blue"><div class="kpi-label">参加登録者</div><div class="kpi-val" id="kpi-total">—</div><div class="kpi-sub">名</div></div>
@@ -204,10 +204,35 @@ select.filter-sel:focus{outline:none;border-color:var(--blue-mid)}
           </select>
           <select class="filter-sel" id="dept-filter" onchange="filterParticipants()">
             <option value="">全職業部門</option>
-            <option>金属材料製造の職業</option><option>金属加工の職業</option>
-            <option>電気機械器具組立・修理の職業</option><option>輸送用機械器具組立・修理の職業</option>
-            <option>建設の職業</option><option>食料品製造の職業</option>
-            <option>化学製品製造の職業</option><option>印刷・製本の職業</option>
+            <option>銀行・信用金庫・信用組合</option>
+            <option>証券・投資・ファンド</option>
+            <option>保険（生命・損害）</option>
+            <option>不動産・住宅</option>
+            <option>総合建設（ゼネコン）</option>
+            <option>工務店・リフォーム</option>
+            <option>設備工事（電気・管・空調）</option>
+            <option>食品・飲料・農産物</option>
+            <option>機械・設備・金型</option>
+            <option>電気・電子・半導体</option>
+            <option>自動車・輸送機器</option>
+            <option>ソフトウェア・システム開発</option>
+            <option>Web制作・デザイン</option>
+            <option>メディア・広告・PR</option>
+            <option>卸売・商社</option>
+            <option>小売・EC</option>
+            <option>飲食・レストラン・カフェ</option>
+            <option>病院・クリニック・歯科</option>
+            <option>介護・福祉・保育</option>
+            <option>教育・学習塾・研修</option>
+            <option>税理士・会計事務所</option>
+            <option>弁護士・司法書士・行政書士</option>
+            <option>コンサルティング</option>
+            <option>人材・採用・派遣</option>
+            <option>電力・ガス・石油</option>
+            <option>再生可能エネルギー</option>
+            <option>農業・林業・水産</option>
+            <option>団体・NPO・公的機関</option>
+            <option>その他</option>
           </select>
           <button class="btn btn-green" onclick="exportCSV()">📥 CSV出力</button>
           <span style="margin-left:auto;font-size:13px;color:var(--text3)" id="filtered-count"></span>
