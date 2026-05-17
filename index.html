@@ -114,6 +114,7 @@ textarea{min-height:72px;resize:vertical;line-height:1.5}
         <div class="header-sub">公益社団法人日本青年会議所関東地区協議会広域経済圏構築委員会</div>
       </div>
       <div class="header-badge" id="online-count">0名参加中</div>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-family:inherit;cursor:pointer;margin-left:6px">ログアウト</button>
     </div>
   </div>
   <div class="tab-bar">
@@ -318,11 +319,29 @@ const AVATARS = ['#E6F1FB:#185FA5','#EAF3DE:#3B6D11','#EEEDFE:#534AB7','#FAEEDA:
 let me = null, participants = [], requests = [], connections = [], curFilter = 'all', chatPartner = null, chatSub = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // ログイン確認
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.href = 'login.html';
+    return;
+  }
+  // 認証ユーザーのメールをローカルに保持
+  window._authEmail = session.user.email;
+  window._authUserId = session.user.id;
+
   const id = localStorage.getItem('jc_my_id');
   if (id) await loadMe(id);
   await loadParticipants();
   subRealtime();
 });
+
+
+async function doLogout() {
+  if (!confirm('ログアウトしますか？')) return;
+  await sb.auth.signOut();
+  localStorage.removeItem('jc_my_id');
+  window.location.href = 'login.html';
+}
 
 async function loadMe(id) {
   const { data } = await sb.from('participants').select('*').eq('id', id).single();
