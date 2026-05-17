@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#185FA5">
+<title>ログイン — KANTOビジネスマッチング</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;--green:#3B6D11;--gray-mid:#D3D1C7;--bg:#fff;--bg2:#F8F8F6;--border:#E0DFD8;--text:#1a1a18;--text2:#5F5E5A;--text3:#888780;--radius:12px;--radius-sm:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--bg2);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.wrap{width:100%;max-width:400px}
+.logo-area{text-align:center;margin-bottom:28px}
+.logo{font-size:48px;margin-bottom:12px}
+.app-title{font-size:22px;font-weight:700;color:var(--blue);margin-bottom:4px}
+.app-sub{font-size:11px;color:var(--text3);line-height:1.5}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.tab-row{display:flex;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab-btn{flex:1;padding:10px;border:none;background:none;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.form-group{margin-bottom:14px}
+.form-label{font-size:13px;color:var(--text2);margin-bottom:5px;display:block}
+input[type=email],input[type=password],input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);-webkit-appearance:none;transition:border .2s}
+input:focus{outline:none;border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(55,138,221,.15)}
+.btn{display:block;width:100%;padding:13px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .2s;text-align:center;margin-top:4px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:active{background:#0C447C}
+.btn-primary:disabled{background:var(--gray-mid);cursor:not-allowed}
+.error-msg{color:#A32D2D;font-size:13px;margin-top:8px;padding:10px 12px;background:#FCEBEB;border-radius:var(--radius-sm);display:none}
+.success-msg{color:#3B6D11;font-size:13px;margin-top:8px;padding:10px 12px;background:#EAF3DE;border-radius:var(--radius-sm);display:none}
+.divider{text-align:center;color:var(--text3);font-size:12px;margin:16px 0;position:relative}
+.divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
+.divider span{background:var(--bg);padding:0 10px;position:relative}
+.hint{font-size:12px;color:var(--text3);text-align:center;margin-top:16px;line-height:1.6}
+.pw-wrap{position:relative}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-area">
+    <div class="logo">🤝</div>
+    <div class="app-title">KANTOビジネスマッチング</div>
+    <div class="app-sub">公益社団法人日本青年会議所<br>関東地区協議会広域経済圏構築委員会</div>
+  </div>
+
+  <div class="card">
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-login" onclick="switchMode('login')">ログイン</button>
+      <button class="tab-btn" id="tab-signup" onclick="switchMode('signup')">新規登録</button>
+    </div>
+
+    <!-- ログインフォーム -->
+    <div id="form-login">
+      <div class="form-group">
+        <label class="form-label">メールアドレス</label>
+        <input type="email" id="login-email" placeholder="example@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード</label>
+        <div class="pw-wrap">
+          <input type="password" id="login-pw" placeholder="パスワードを入力" autocomplete="current-password">
+          <button class="pw-toggle" onclick="togglePw('login-pw')">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">ログイン</button>
+      <div class="error-msg" id="login-error"></div>
+      <div class="divider"><span>または</span></div>
+      <div style="text-align:center">
+        <button onclick="switchMode('reset')" style="background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;font-family:inherit">パスワードを忘れた方はこちら</button>
+      </div>
+    </div>
+
+    <!-- 新規登録フォーム -->
+    <div id="form-signup" style="display:none">
+      <div class="form-group">
+        <label class="form-label">メールアドレス</label>
+        <input type="email" id="signup-email" placeholder="example@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード（6文字以上）</label>
+        <div class="pw-wrap">
+          <input type="password" id="signup-pw" placeholder="パスワードを設定" autocomplete="new-password">
+          <button class="pw-toggle" onclick="togglePw('signup-pw')">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">パスワード（確認）</label>
+        <div class="pw-wrap">
+          <input type="password" id="signup-pw2" placeholder="パスワードを再入力" autocomplete="new-password">
+          <button class="pw-toggle" onclick="togglePw('signup-pw2')">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="signup-btn" onclick="doSignup()">アカウント作成</button>
+      <div class="error-msg" id="signup-error"></div>
+      <div class="success-msg" id="signup-success"></div>
+    </div>
+
+    <!-- パスワードリセット -->
+    <div id="form-reset" style="display:none">
+      <div style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6">登録したメールアドレスを入力してください。パスワードリセット用のメールを送信します。</div>
+      <div class="form-group">
+        <label class="form-label">メールアドレス</label>
+        <input type="email" id="reset-email" placeholder="example@email.com">
+      </div>
+      <button class="btn btn-primary" id="reset-btn" onclick="doReset()">リセットメールを送信</button>
+      <div class="error-msg" id="reset-error"></div>
+      <div class="success-msg" id="reset-success"></div>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="switchMode('login')" style="background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;font-family:inherit">← ログインに戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">
+    初めての方は「新規登録」からアカウントを作成してください<br>
+    同じアカウントでどの端末からもログインできます
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://jskvobgulnjpohwmrpip.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impza3ZvYmd1bG5qcG9od21ycGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NDY1NTAsImV4cCI6MjA5MTMyMjU1MH0.tYXWIRfhJ1HAZBrqA5f_MBZj8lTGvy-HjAjO6Vm4ZPw';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// すでにログイン済みならアプリへ
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) window.location.href = 'index.html';
+});
+
+function switchMode(mode) {
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-signup').style.display = 'none';
+  document.getElementById('form-reset').style.display = 'none';
+  document.getElementById('tab-login').classList.remove('active');
+  document.getElementById('tab-signup').classList.remove('active');
+  document.getElementById('form-' + mode).style.display = 'block';
+  if (mode === 'login') document.getElementById('tab-login').classList.add('active');
+  if (mode === 'signup') document.getElementById('tab-signup').classList.add('active');
+}
+
+function togglePw(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const err = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  err.style.display = 'none';
+  if (!email || !pw) { err.style.display = 'block'; err.textContent = 'メールアドレスとパスワードを入力してください'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>ログイン中...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  btn.disabled = false; btn.textContent = 'ログイン';
+  if (error) {
+    err.style.display = 'block';
+    err.textContent = error.message.includes('Invalid') ? 'メールアドレスまたはパスワードが正しくありません' : error.message;
+    return;
+  }
+  window.location.href = 'index.html';
+}
+
+async function doSignup() {
+  const email = document.getElementById('signup-email').value.trim();
+  const pw = document.getElementById('signup-pw').value;
+  const pw2 = document.getElementById('signup-pw2').value;
+  const err = document.getElementById('signup-error');
+  const suc = document.getElementById('signup-success');
+  const btn = document.getElementById('signup-btn');
+  err.style.display = 'none'; suc.style.display = 'none';
+  if (!email || !pw) { err.style.display = 'block'; err.textContent = 'すべての項目を入力してください'; return; }
+  if (pw.length < 6) { err.style.display = 'block'; err.textContent = 'パスワードは6文字以上で設定してください'; return; }
+  if (pw !== pw2) { err.style.display = 'block'; err.textContent = 'パスワードが一致しません'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>登録中...';
+  const { error } = await sb.auth.signUp({ email, password: pw });
+  btn.disabled = false; btn.textContent = 'アカウント作成';
+  if (error) { err.style.display = 'block'; err.textContent = error.message; return; }
+  suc.style.display = 'block';
+  suc.textContent = '✅ アカウントを作成しました！ログインしてください';
+  setTimeout(() => switchMode('login'), 2000);
+}
+
+async function doReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  const err = document.getElementById('reset-error');
+  const suc = document.getElementById('reset-success');
+  const btn = document.getElementById('reset-btn');
+  err.style.display = 'none'; suc.style.display = 'none';
+  if (!email) { err.style.display = 'block'; err.textContent = 'メールアドレスを入力してください'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>送信中...';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/index.html'
+  });
+  btn.disabled = false; btn.textContent = 'リセットメールを送信';
+  if (error) { err.style.display = 'block'; err.textContent = error.message; return; }
+  suc.style.display = 'block';
+  suc.textContent = '✅ リセット用メールを送信しました。メールをご確認ください';
+}
+
+// Enterキーでログイン
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('form-login').style.display !== 'none') doLogin();
+    else if (document.getElementById('form-signup').style.display !== 'none') doSignup();
+  }
+});
+</script>
+</body>
+</html>
